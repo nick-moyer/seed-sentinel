@@ -62,7 +62,7 @@ func main() {
 	})
 
     // Start Server
-	fmt.Println("🌱 Seed Sentinel Backend listening on :8080...")
+	fmt.Println("Seed Sentinel Backend listening on :8080...")
 	http.ListenAndServe(":8080", nil)
 }
 
@@ -73,7 +73,7 @@ func processLogic(data SensorPayload) {
 	jsonData, _ := json.Marshal(data)
 	resp, err := http.Post("http://localhost:5000/analyze", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {
-		fmt.Println("⚠️  Agent is offline:", err)
+		fmt.Println("Agent is offline:", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -81,16 +81,16 @@ func processLogic(data SensorPayload) {
 	// 2. Read Decision
 	var agentResp AgentResponse
 	if err := json.NewDecoder(resp.Body).Decode(&agentResp); err != nil {
-		fmt.Println("⚠️  Error decoding agent response:", err)
+		fmt.Println("Error decoding agent response:", err)
 		return
 	}
 
 	// 3. Act
 	if agentResp.AlertNeeded {
-		fmt.Printf("🚨 ALERT: %s\n", agentResp.Advice)
+		fmt.Printf("ALERT: %s\n", agentResp.Advice)
 		SendNotification(agentResp.Advice)
 	} else {
-		fmt.Println("✅ Status OK")
+		fmt.Println("Status OK")
 	}
 }
 
@@ -98,11 +98,11 @@ func SendNotification(message string) {
 	target := os.Getenv("NOTIFICATION_TARGET")
 
 	if target == "" {
-		fmt.Println("❌ Error: NOTIFICATION_TARGET is missing in .env")
+		fmt.Println("Error: NOTIFICATION_TARGET is missing in .env")
 		return
 	}
 
-	fmt.Printf("🔔 Sending alert to configured target...\n")
+	fmt.Printf("Sending alert to configured target...\n")
 
 	url := fmt.Sprintf("https://ntfy.sh/%s", target)
 	http.Post(url, "text/plain", strings.NewReader(message))
