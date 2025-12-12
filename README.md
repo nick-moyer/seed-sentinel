@@ -24,6 +24,7 @@ graph LR
     B -->|JSON / WiFi| C{Go Backend}
     C -->|Alerts| D[Ntfy]
     C -->|Consult| E[LLM Agent]
+    C -->|Save Reading| G[Database]
     E -->|Inference| F[Ollama]
     F -->|Advice| E
     E -->|Decision| C
