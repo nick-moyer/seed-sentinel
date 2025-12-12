@@ -7,9 +7,25 @@ import (
 	"net/http"
 
 	"github.com/nick-moyer/seed-sentinel/models"
+	"github.com/nick-moyer/seed-sentinel/store"
 )
 
-func RunAgent(data models.SensorPayload) (models.AgentResponse, error) {
+func RunAgent(payload models.SensorReadingPayload) (models.AgentResponse, error) {
+	 // Query plant name from sensors table
+    var plantName string
+    err := store.DB().QueryRow("SELECT plant_name FROM sensors WHERE id = ?", payload.SensorID).Scan(&plantName)
+    if err != nil {
+        fmt.Println("Error fetching plant name:", err)
+        plantName = "Unknown" // fallback if not found
+    }
+
+	// Prepare data for LLM-Agent
+	data := map[string]any{
+		"sensor_id": payload.SensorID,
+		"moisture":  payload.Moisture,
+		"plant_name": plantName,
+	}
+
 	jsonData, _ := json.Marshal(data)
 	resp, err := http.Post("http://localhost:5000/analyze", "application/json", bytes.NewBuffer(jsonData))
 	if err != nil {

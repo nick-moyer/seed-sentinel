@@ -12,6 +12,22 @@ import (
 	"github.com/nick-moyer/seed-sentinel/store"
 )
 
+// Helper to enforce POST and decode JSON
+func handlePostJSON[T any](w http.ResponseWriter, r *http.Request, payload *T) bool {
+	// Only allow POST
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return false
+	}
+
+	// Decode JSON
+	if err := json.NewDecoder(r.Body).Decode(payload); err != nil {
+		http.Error(w, "Bad JSON", http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
 // --- MAIN ---
 
 func main() {
@@ -24,38 +40,51 @@ func main() {
 	// Initialize DB
 	store.InitDB()
 
-	// HTTP Handler
-	http.HandleFunc("/telemetry", func(w http.ResponseWriter, r *http.Request) {
-		// Only allow POST
-		if r.Method != http.MethodPost {
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-
-		// Decode JSON
-		var data models.SensorPayload
-		if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
-			http.Error(w, "Bad JSON", http.StatusBadRequest)
+	// HTTP Handlers
+	http.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
+		// Parse request
+		var data models.SensorConfigPayload
+		if !handlePostJSON(w, r, &data) {
 			return
 		}
 
 		// Log it
-		fmt.Printf("[%s] Received: Sensor=%s Moisture=%d%% Plant=%s\n",
-			time.Now().Format(time.RFC3339), data.SensorID, data.Moisture, data.PlantName)
+		fmt.Printf("[%s] Received Config: Sensor=%s Plant=%s\n",
+			time.Now().Format(time.RFC3339), data.SensorID, data.PlantName)
+
+		// Save to DB
+		store.SaveSensor(data.SensorID, data.PlantName)
 
 		// Send 200 OK back to the sensor
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ACK"))
+	})
 
-		go func(data models.SensorPayload) {
+	http.HandleFunc("/telemetry", func(w http.ResponseWriter, r *http.Request) {
+		// Parse request
+		var data models.SensorReadingPayload
+		if !handlePostJSON(w, r, &data) {
+			return
+		}
+
+		// Log it
+		fmt.Printf("[%s] Received: Sensor=%s Moisture=%d%%\n",
+			time.Now().Format(time.RFC3339), data.SensorID, data.Moisture)
+
+		// Save to DB
+		store.SaveReading(data)
+
+		// Run LLM-Agent in background
+		go func(data models.SensorReadingPayload) {
 			decision, _ := services.RunAgent(data)
 			if decision.AlertNeeded {
 				services.SendNotification(decision.Advice)
 			}
 		}(data)
 
-		// Save to DB
-		store.SaveReading(data)
+		// Send 200 OK back to the sensor
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ACK"))
 	})
 
 	// Start Server

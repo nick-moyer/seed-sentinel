@@ -3,10 +3,14 @@ package models
 import "time"
 
 // Data received from sensor
-type SensorPayload struct {
+type SensorConfigPayload struct {
+	SensorID  string `json:"sensor_id"`
+	PlantName string `json:"plant_name"`
+}
+
+type SensorReadingPayload struct {
 	SensorID  string `json:"sensor_id"`
 	Moisture  int    `json:"moisture"`
-	PlantName string `json:"plant_name"`
 }
 
 // Data stored in DB

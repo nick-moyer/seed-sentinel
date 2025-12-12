@@ -21,10 +21,12 @@ The system follows a **Microservices** architecture designed for local privacy a
 ```mermaid
 graph LR
     A[Soil Sensor] -->|Analog Signal| B(ESP32 Node)
-    B -->|JSON / WiFi| C{Go Backend}
+    B -->|/config| C{Go Backend}
+    B -->|/telemetry| C{Go Backend}
     C -->|Alerts| D[Ntfy]
     C -->|Consult| E[LLM Agent]
     C -->|Save Reading| G[Database]
+    C -->|Save Config| G[Database]
     E -->|Inference| F[Ollama]
     F -->|Advice| E
     E -->|Decision| C
