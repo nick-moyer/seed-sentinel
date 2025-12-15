@@ -1,4 +1,10 @@
-# 🌱 Seed Sentinel ![Status](https://img.shields.io/badge/Status-Prototype-orange) ![Language](https://img.shields.io/badge/Backend-Go-blue) ![Hardware](https://img.shields.io/badge/Hardware-ESP32-green)
+# 🌱 Seed Sentinel
+
+![Status](https://img.shields.io/badge/Status-Prototype-orange)
+![Language](https://img.shields.io/badge/Backend-Go-blue?logo=go&logoColor=white)
+![Language](https://img.shields.io/badge/Agent-Python-3776AB?logo=python&logoColor=white)
+[![Database: SQLite](https://img.shields.io/badge/Database-SQLite-07405E?style=flat&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+![AI](https://img.shields.io/badge/AI-Ollama-purple?logo=ollama&logoColor=white)
 
 <p align="center">
   <img src="./assets/logo.png" width="300" title="Logo">
@@ -8,7 +14,17 @@
 
 *High tech for deep roots*
 
-Seed Sentinel is an open-source platform designed to democratize "Nature Intelligence" by translating the silent language of plants into actionable insights. Combining low-cost, distributed soil telemetry with an adaptive AI botanist, the system monitors real-time environmental conditions and compares them against species-specific needs—whether you are growing rare native prairie flowers or backyard vegetables. By replacing guesswork with data-driven guidance, Seed Sentinel lowers the barrier to ecological restoration, empowering anyone to successfully grow any seed and deepen their connection to the natural world without proprietary lock-in.
+Seed Sentinel is an open-source platform that translates plant signals into actionable insights. By combining affordable soil sensors with an AI botanist, it monitors real-time conditions and compares them to each plant’s needs. This data-driven approach empowers anyone to grow seeds successfully and restore ecosystems—without proprietary barriers.
+
+## 📂 Project Ecosystem
+
+The system is split into two repositories to separate the "Bits" from the "Atoms":
+
+| Repository | Description | Tech Stack |
+| :--- | :--- | :--- |
+| **[seed-sentinel](https://github.com/nickmoyer/seed-sentinel)** | **The Hub (This Repo)**<br>Contains the Go Backend, Database, and Python AI Agent. | Go, Python, SQLite, Ollama |
+| **[seed-sentinel-device](https://github.com/nickmoyer/seed-sentinel-device)** | **The Node**<br>Contains the ESP32 Firmware, Circuit Schematics, and 3D CAD files. | C++, PlatformIO, FreeCAD |
+
 
 ## 🏗 Architecture
 
@@ -64,3 +80,37 @@ go run main.go
 cd llm-agent
 uv run main.py
 ```
+
+## 🔌 Hardware Setup
+To build the physical node, please visit the [seed-sentinel-device](https://github.com/nickmoyer/seed-sentinel-device) repository.
+
+Brief BOM Overview:
+- ESP32 Development Board (ESP-WROOM-32)
+- Capacitive Soil Moisture Sensor v1.2
+- USB-C Cable for power/data
+
+
+## 🧪 Testing the Loop
+You don't need the hardware to test the software stack. You can simulate the hardware using cURL or Postman.
+
+1. Register a New Device (Provisioning)
+
+``` bash
+curl -X POST http://localhost:8080/config \
+     -H "Content-Type: application/json" \
+     -d '{"mac_address": "AA:BB:CC:DD:EE:FF", "plant_name": "Purple Coneflower"}'
+```
+
+2. Simulate Telemetry
+
+``` bash
+curl -X POST http://localhost:8080/telemetry \
+     -H "Content-Type: application/json" \
+     -d '{"sensor_id": "AA:BB:CC:DD:EE:FF", "moisture": 15}'
+```
+
+Expected Result:
+1. Go logs the request and saves to seed.db.
+2. Python asks Ollama ("Is 15% moisture bad for a Coneflower?").
+3. Ollama responds "Yes, critical."
+4. Your phone buzzes (via Ntfy) with the alert.
