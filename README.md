@@ -98,7 +98,7 @@ You don't need the hardware to test the software stack. You can simulate the har
 ``` bash
 curl -X POST http://localhost:8080/config \
      -H "Content-Type: application/json" \
-     -d '{"mac_address": "AA:BB:CC:DD:EE:FF", "plant_name": "Purple Coneflower"}'
+     -d '{"mac_address": "AA:BB:CC:DD:EE:FF", "plant_name": "Tomato"}'
 ```
 
 2. Simulate Telemetry
@@ -111,6 +111,6 @@ curl -X POST http://localhost:8080/telemetry \
 
 Expected Result:
 1. Go logs the request and saves to seed.db.
-2. Python asks Ollama ("Is 15% moisture bad for a Coneflower?").
+2. Python asks Ollama ("Is 15% moisture bad for a tomato?").
 3. Ollama responds "Yes, critical."
 4. Your phone buzzes (via Ntfy) with the alert.
