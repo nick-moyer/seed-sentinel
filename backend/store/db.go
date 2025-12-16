@@ -30,16 +30,29 @@ func InitDB() {
 	createTable(`
         CREATE TABLE IF NOT EXISTS sensors (
             id TEXT PRIMARY KEY,
-            plant_name TEXT
+			dry_reference INTEGER,
+			wet_reference INTEGER,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         );`, "sensors") // id = device mac address
+
+	createTable(`
+        CREATE TABLE IF NOT EXISTS plants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+			sensor_id TEXT,
+            name TEXT,
+			date_planted DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY(sensor_id) REFERENCES sensors(id)
+        );`, "plants")
 
 	createTable(`
         CREATE TABLE IF NOT EXISTS readings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sensor_id TEXT,
-            moisture INTEGER,
-            timestamp DATETIME,
-            FOREIGN KEY(sensor_id) REFERENCES sensors(id)
+            plant_id TEXT,
+            moisture_percentage INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(plant_id) REFERENCES plants(id)
         );`, "readings")
 
 	log.Println("Database initialized (sentinel.db)")

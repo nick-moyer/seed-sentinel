@@ -3,22 +3,39 @@ package models
 import "time"
 
 // Data received from sensor
-type SensorConfigPayload struct {
-	SensorID  string `json:"sensor_id"`
-	PlantName string `json:"plant_name"`
+type SensorCalibrationPayload struct {
+	SensorID     string `json:"sensor_id"`
+	DryReference int    `json:"dry_reference"`
+	WetReference int    `json:"wet_reference"`
 }
 
 type SensorReadingPayload struct {
-	SensorID  string `json:"sensor_id"`
-	Moisture  int    `json:"moisture"`
+	SensorID string `json:"sensor_id"`
+	RawValue int    `json:"raw_value"`
 }
 
 // Data stored in DB
 type Reading struct {
-	ID        int
-	SensorID  int
-	Moisture  int
-	Timestamp time.Time
+	ID                 int
+	PlantID            int
+	MoisturePercentage int
+	CreatedAt          time.Time
+}
+
+type Plant struct {
+	ID          int
+	SensorID    string
+	Name        string
+	DatePlanted time.Time
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+// Payload sent to LLM-Agent
+type AgentPayload struct {
+	PlantName          string `json:"plant_name"`
+	PlantAgeDays       int    `json:"plant_age_days"`
+	MoisturePercentage int    `json:"moisture_percentage"`
 }
 
 // Response from LLM-Agent

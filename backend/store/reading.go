@@ -1,36 +1,54 @@
 package store
 
 import (
+	"fmt"
 	"log"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/nick-moyer/seed-sentinel/models"
 )
 
-// Save a sensor reading
-func SaveReading(payload models.SensorReadingPayload) {
-	// Check if the sensor exists
-	var exists bool
-	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM sensors WHERE id = ?)", payload.SensorID).Scan(&exists)
-	if err != nil {
-		log.Println("Database Error (Sensor Exists Check):", err)
-		return
+func CalculateMoisturePercentage(rawValue, dryRef, wetRef int) int {
+	if rawValue <= dryRef {
+		return 0
 	}
-	if !exists {
-		log.Printf("Sensor with id %s does not exist. Reading not saved.\n", payload.SensorID)
+
+	if rawValue >= wetRef {
+		return 100
+	}
+
+	return (wetRef - rawValue) * 100 / (wetRef - dryRef)
+}
+
+// Saves a sensor reading
+func InsertReading(data models.SensorReadingPayload) {
+	// Fetch calibration values
+	dryRef, wetRef, err := GetCalibration(data.SensorID)
+	if err != nil {
+		log.Printf("Sensor with id %s does not exist or calibration not found. Reading not saved.\n", data.SensorID)
 		return
 	}
 
-	stmt, err := db.Prepare("INSERT INTO readings(sensor_id, moisture, timestamp) VALUES(?, ?, ?)")
+	// Fetch plant by sensor ID
+	plant, err := FetchPlantBySensorID(data.SensorID)
+	if err != nil {
+		log.Printf("No plant found for sensor %s. Reading not saved.\n", data.SensorID)
+		return
+	}
+
+	// Convert raw value to moisture percentage
+	moisture := CalculateMoisturePercentage(data.RawValue, dryRef, wetRef)
+
+	// Insert reading into DB
+	stmt, err := db.Prepare("INSERT INTO readings(plant_id, moisture_percentage) VALUES(?, ?)")
 	if err != nil {
 		log.Println("Database Error (Prepare):", err)
 		return
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(payload.SensorID, payload.Moisture, time.Now())
+	_, err = stmt.Exec(plant.ID, moisture)
 	if err != nil {
 		log.Println("Database Error (Insert):", err)
 	} else {
@@ -38,9 +56,22 @@ func SaveReading(payload models.SensorReadingPayload) {
 	}
 }
 
-// Returns up to 100 readings for a sensor
-func FetchReadings(sensorID string) ([]models.Reading, error) {
-	rows, err := db.Query("SELECT moisture, timestamp FROM readings WHERE sensor_id = ? ORDER BY timestamp ASC LIMIT 100", sensorID)
+// Returns up to `limit` readings for a sensor
+func FetchReadings(sensorID string, limit int) ([]models.Reading, error) {
+	if limit < 1 {
+		limit = 100
+	}
+
+	query := fmt.Sprintf(`
+        SELECT r.moisture_percentage, r.created_at
+        FROM readings r
+        INNER JOIN plants p ON r.plant_id = p.id
+        WHERE p.sensor_id = ?
+        ORDER BY r.created_at ASC
+        LIMIT %d
+    `, limit)
+
+	rows, err := db.Query(query, sensorID)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +80,7 @@ func FetchReadings(sensorID string) ([]models.Reading, error) {
 	var history []models.Reading
 	for rows.Next() {
 		var reading models.Reading
-		if err := rows.Scan(&reading.Moisture, &reading.Timestamp); err != nil {
+		if err := rows.Scan(&reading.MoisturePercentage, &reading.CreatedAt); err != nil {
 			return nil, err
 		}
 		history = append(history, reading)

@@ -14,16 +14,18 @@ def analyze_plant():
     # 1. Parse Data
     data = request.get_json() or {}
     plant_name = data.get('plant_name', 'Unknown Plant')
-    moisture = data.get('moisture', 0)
+    plant_age_days = data.get('plant_age_days', 0)
+    moisture = data.get('moisture_percentage', 0)
 
-    print(f"[Brain] Analyzing {plant_name}: Moisture={moisture}%")
+    print(f"[Brain] Analyzing {plant_name}: Moisture={moisture}%, Age={plant_age_days} days")
 
     # 2. Construct the Prompt
     prompt = f"""
-    You are an expert botanist growing {plant_name} from seed.
+    You are an expert botanist caring for a {plant_name} planted from seed.
+    The seed was planted {plant_age_days} days ago.
     The current soil moisture is {moisture}%.
 
-    Determine if this is dangerous for this specific plant type.
+    Determine if this is dangerous for this specific plant at its current age.
 
     Return ONLY a JSON object with this format (do not include markdown formatting):
     {{

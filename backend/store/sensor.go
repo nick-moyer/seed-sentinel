@@ -4,19 +4,30 @@ import (
 	"log"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/nick-moyer/seed-sentinel/models"
 )
 
+// Fetches dry and wet calibration values for a sensor by ID
+func GetCalibration(sensorID string) (int, int, error) {
+	var dryRef, wetRef int
+	err := db.QueryRow("SELECT dry_reference, wet_reference FROM sensors WHERE id = ?", sensorID).Scan(&dryRef, &wetRef)
+	if err != nil {
+		return 0, 0, err
+	}
+	return dryRef, wetRef, nil
+}
+
 // Updates or inserts a sensor configuration
-func UpsertSensor(id string, plantName string) {
+func UpsertSensor(data models.SensorCalibrationPayload) {
 	// Try to update first
-	updateStmt, err := db.Prepare("UPDATE sensors SET plant_name = ? WHERE id = ?")
+	updateStmt, err := db.Prepare("UPDATE sensors SET dry_reference = ?, wet_reference = ? WHERE id = ?")
 	if err != nil {
 		log.Println("Database Error (Prepare Update):", err)
 		return
 	}
 	defer updateStmt.Close()
 
-	res, err := updateStmt.Exec(plantName, id)
+	res, err := updateStmt.Exec(data.DryReference, data.WetReference, data.SensorID)
 	if err != nil {
 		log.Println("Database Error (Update):", err)
 		return
@@ -30,21 +41,21 @@ func UpsertSensor(id string, plantName string) {
 
 	if rowsAffected == 0 {
 		// No row updated, insert new
-		insertStmt, err := db.Prepare("INSERT INTO sensors(id, plant_name) VALUES(?, ?)")
+		insertStmt, err := db.Prepare("INSERT INTO sensors(id, dry_reference, wet_reference) VALUES(?, ?, ?)")
 		if err != nil {
 			log.Println("Database Error (Prepare Insert):", err)
 			return
 		}
 		defer insertStmt.Close()
 
-		_, err = insertStmt.Exec(id, plantName)
+		_, err = insertStmt.Exec(data.SensorID, data.DryReference, data.WetReference)
 		if err != nil {
 			log.Println("Database Error (Insert):", err)
 		} else {
-			log.Println("Inserted new sensor to DB:", id)
+			log.Println("Inserted new sensor to DB:", data.SensorID)
 		}
 	} else {
-		log.Println("Updated sensor in DB:", id)
+		log.Println("Updated sensor in DB:", data.SensorID)
 	}
 }
 
