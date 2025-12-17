@@ -47,6 +47,8 @@ func calibrateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Calibrated sensor %s: Dry=%d, Wet=%d\n", payload.SensorID, payload.DryReference, payload.WetReference)
+
 	// Send 200 OK back to the sensor
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ACK"))
@@ -68,6 +70,8 @@ func configureHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Printf("Configured plant for sensor %s: %+v\n", payload.SensorID, payload.Name)
+
 	// Send 200 OK back to the sensor
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ACK"))
@@ -84,18 +88,11 @@ func telemetryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save to DB
-	if err := store.InsertReading(ctx, payload); err != nil {
+	latest, err := store.InsertReading(ctx, payload)
+	if err != nil {
 		http.Error(w, "Failed to save reading: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// Fetch latest reading to pass to agent
-	readings, err := store.FetchReadings(ctx, payload.SensorID, 1)
-	if err != nil {
-		http.Error(w, "Failed to fetch readings: "+err.Error(), http.StatusInternalServerError)
-		return
-	}
-	latest := readings[0]
 
 	// Fetch plant details
 	plant, err := store.FetchPlantBySensorID(ctx, payload.SensorID)
@@ -103,6 +100,9 @@ func telemetryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to fetch plant details: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	// Log latest reading
+	log.Printf("Latest reading for sensor %s: %+v\n", payload.SensorID, latest)
 
 	// Run LLM-Agent in background
 	go func(m models.AgentPayload) {
@@ -113,7 +113,7 @@ func telemetryHandler(w http.ResponseWriter, r *http.Request) {
 	}(models.AgentPayload{
 		PlantName:          plant.Name,
 		PlantAgeDays:       int(time.Since(plant.DatePlanted).Hours() / 24),
-		MoisturePercentage: latest.MoisturePercentage,
+		MoisturePercentage: latest,
 	})
 
 	// Send 200 OK back to the sensor

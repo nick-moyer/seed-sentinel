@@ -11,15 +11,25 @@ import (
 
 // Converts raw sensor value to moisture percentage using calibration data
 func CalculateMoisturePercentage(rawValue, dryRef, wetRef int) int {
-	if rawValue >= dryRef {
-		return 0
+	if dryRef > wetRef {
+		// Typical: higher value = drier
+		if rawValue >= dryRef {
+			return 0
+		}
+		if rawValue <= wetRef {
+			return 100
+		}
+		return (dryRef - rawValue) * 100 / (dryRef - wetRef)
+	} else {
+		// Inverted
+		if rawValue <= dryRef {
+			return 0
+		}
+		if rawValue >= wetRef {
+			return 100
+		}
+		return (rawValue - dryRef) * 100 / (wetRef - dryRef)
 	}
-
-	if rawValue <= wetRef {
-		return 100
-	}
-
-	return (wetRef - rawValue) * 100 / (wetRef - dryRef)
 }
 
 // Returns up to `limit` readings for a sensor
@@ -57,18 +67,18 @@ func FetchReadings(ctx context.Context, sensorID string, limit int) ([]models.Re
 	return history, nil
 }
 
-// Inserts a new sensor reading
-func InsertReading(ctx context.Context, data models.SensorReadingPayload) error {
+// Inserts a new sensor reading and returns the calculated moisture percentage
+func InsertReading(ctx context.Context, data models.SensorReadingPayload) (int, error) {
 	// Fetch calibration values
 	dryRef, wetRef, err := FetchSensorCalibration(ctx, data.SensorID)
 	if err != nil {
-		return fmt.Errorf("sensor with id %s does not exist or calibration not found: %w", data.SensorID, err)
+		return 0, fmt.Errorf("sensor with id %s does not exist or calibration not found: %w", data.SensorID, err)
 	}
 
 	// Fetch plant by sensor ID
 	plant, err := FetchPlantBySensorID(ctx, data.SensorID)
 	if err != nil {
-		return fmt.Errorf("no plant found for sensor %s: %w", data.SensorID, err)
+		return 0, fmt.Errorf("no plant found for sensor %s: %w", data.SensorID, err)
 	}
 
 	// Convert raw value to moisture percentage
@@ -77,14 +87,14 @@ func InsertReading(ctx context.Context, data models.SensorReadingPayload) error 
 	// Insert reading into DB
 	stmt, err := db.PrepareContext(ctx, "INSERT INTO readings(plant_id, moisture_percentage) VALUES(?, ?)")
 	if err != nil {
-		return fmt.Errorf("database error (prepare): %w", err)
+		return 0, fmt.Errorf("database error (prepare): %w", err)
 	}
 	defer stmt.Close()
 
 	_, err = stmt.ExecContext(ctx, plant.ID, moisture)
 	if err != nil {
-		return fmt.Errorf("database error (insert): %w", err)
+		return 0, fmt.Errorf("database error (insert): %w", err)
 	}
 
-	return nil
+	return moisture, nil
 }
