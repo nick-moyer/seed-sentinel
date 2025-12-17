@@ -29,19 +29,12 @@ func handleJSON[T any](w http.ResponseWriter, r *http.Request, payload *T) bool 
 	return true
 }
 
-// func handleDBError(w http.ResponseWriter, err error) bool {
-// 	if err != nil {
-// 		http.Error(w, "Database error", http.StatusInternalServerError)
-// 		return true
-// 	}
-// 	return false
-// }
-
 // --- HANDLERS ---
 
 // POST /calibrate
 func calibrateHandler(w http.ResponseWriter, r *http.Request) {
 	var payload models.SensorCalibrationPayload
+	ctx := r.Context()
 
 	// Parse request
 	if !handleJSON(w, r, &payload) {
@@ -49,7 +42,31 @@ func calibrateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save to DB
-	store.UpsertSensor(payload)
+	if err := store.UpsertSensor(ctx, payload); err != nil {
+		http.Error(w, "Failed to save calibration: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Send 200 OK back to the sensor
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("ACK"))
+}
+
+// POST /configure
+func configureHandler(w http.ResponseWriter, r *http.Request) {
+	var payload models.PlantConfigurationPayload
+	ctx := r.Context()
+
+	// Parse request
+	if !handleJSON(w, r, &payload) {
+		return
+	}
+
+	// Save to DB
+	if err := store.UpsertPlantConfiguration(ctx, payload); err != nil {
+		http.Error(w, "Failed to save plant configuration: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Send 200 OK back to the sensor
 	w.WriteHeader(http.StatusOK)
@@ -59,6 +76,7 @@ func calibrateHandler(w http.ResponseWriter, r *http.Request) {
 // POST /telemetry
 func telemetryHandler(w http.ResponseWriter, r *http.Request) {
 	var payload models.SensorReadingPayload
+	ctx := r.Context()
 
 	// Parse request
 	if !handleJSON(w, r, &payload) {
@@ -66,14 +84,25 @@ func telemetryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save to DB
-	store.InsertReading(payload)
+	if err := store.InsertReading(ctx, payload); err != nil {
+		http.Error(w, "Failed to save reading: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Fetch latest reading to pass to agent
-	readings, _ := store.FetchReadings(payload.SensorID, 1)
+	readings, err := store.FetchReadings(ctx, payload.SensorID, 1)
+	if err != nil {
+		http.Error(w, "Failed to fetch readings: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 	latest := readings[0]
 
 	// Fetch plant details
-	plant, _ := store.FetchPlantBySensorID(payload.SensorID)
+	plant, err := store.FetchPlantBySensorID(ctx, payload.SensorID)
+	if err != nil {
+		http.Error(w, "Failed to fetch plant details: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 	// Run LLM-Agent in background
 	go func(m models.AgentPayload) {
@@ -92,40 +121,14 @@ func telemetryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("ACK"))
 }
 
-// // GET /api/sensors
-// func listSensorsHandler(w http.ResponseWriter, r *http.Request) {
-// 	// Fetch from DB
-// 	sensors, err := store.ListSensors()
-// 	if handleDBError(w, err) {
-// 		return
-// 	}
-
-// 	// Return JSON
-// 	json.NewEncoder(w).Encode(sensors)
-// }
-
-// // GET /api/history/{id}
-// func historyHandler(w http.ResponseWriter, r *http.Request) {
-// 	vars := mux.Vars(r)
-// 	id := vars["id"]
-
-// 	// Fetch from DB
-// 	history, err := store.FetchReadings(id)
-// 	if handleDBError(w, err) {
-// 		return
-// 	}
-
-// 	// Return JSON
-// 	json.NewEncoder(w).Encode(history)
-// }
-
 // --- ROUTES ---
 
 func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/calibrate", calibrateHandler).Methods("POST")
 	r.HandleFunc("/telemetry", telemetryHandler).Methods("POST")
-	// r.HandleFunc("/api/sensors", listSensorsHandler).Methods("GET")
-	// r.HandleFunc("/api/history/{id}", historyHandler).Methods("GET")
+	r.HandleFunc("/configure", configureHandler).Methods("POST")
+
+	// TODO: server frontend
 	fs := http.FileServer(http.Dir("../frontend"))
 	r.PathPrefix("/").Handler(fs)
 }

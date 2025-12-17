@@ -14,6 +14,13 @@ type SensorReadingPayload struct {
 	RawValue int    `json:"raw_value"`
 }
 
+// Data sent to sensor for configuration
+type PlantConfigurationPayload struct {
+	SensorID    string    `json:"sensor_id"`
+	Name        string    `json:"name"`
+	DatePlanted time.Time `json:"date_planted"`
+}
+
 // Data stored in DB
 type Reading struct {
 	ID                 int

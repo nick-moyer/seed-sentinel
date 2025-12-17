@@ -1,63 +1,29 @@
 package store
 
 import (
+	"context"
 	"fmt"
-	"log"
 
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/nick-moyer/seed-sentinel/models"
 )
 
+// Converts raw sensor value to moisture percentage using calibration data
 func CalculateMoisturePercentage(rawValue, dryRef, wetRef int) int {
-	if rawValue <= dryRef {
+	if rawValue >= dryRef {
 		return 0
 	}
 
-	if rawValue >= wetRef {
+	if rawValue <= wetRef {
 		return 100
 	}
 
 	return (wetRef - rawValue) * 100 / (wetRef - dryRef)
 }
 
-// Saves a sensor reading
-func InsertReading(data models.SensorReadingPayload) {
-	// Fetch calibration values
-	dryRef, wetRef, err := GetCalibration(data.SensorID)
-	if err != nil {
-		log.Printf("Sensor with id %s does not exist or calibration not found. Reading not saved.\n", data.SensorID)
-		return
-	}
-
-	// Fetch plant by sensor ID
-	plant, err := FetchPlantBySensorID(data.SensorID)
-	if err != nil {
-		log.Printf("No plant found for sensor %s. Reading not saved.\n", data.SensorID)
-		return
-	}
-
-	// Convert raw value to moisture percentage
-	moisture := CalculateMoisturePercentage(data.RawValue, dryRef, wetRef)
-
-	// Insert reading into DB
-	stmt, err := db.Prepare("INSERT INTO readings(plant_id, moisture_percentage) VALUES(?, ?)")
-	if err != nil {
-		log.Println("Database Error (Prepare):", err)
-		return
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(plant.ID, moisture)
-	if err != nil {
-		log.Println("Database Error (Insert):", err)
-	} else {
-		log.Println("Saved reading to DB")
-	}
-}
-
 // Returns up to `limit` readings for a sensor
-func FetchReadings(sensorID string, limit int) ([]models.Reading, error) {
+func FetchReadings(ctx context.Context, sensorID string, limit int) ([]models.Reading, error) {
 	if limit < 1 {
 		limit = 100
 	}
@@ -71,7 +37,7 @@ func FetchReadings(sensorID string, limit int) ([]models.Reading, error) {
         LIMIT %d
     `, limit)
 
-	rows, err := db.Query(query, sensorID)
+	rows, err := db.QueryContext(ctx, query, sensorID)
 	if err != nil {
 		return nil, err
 	}
@@ -89,4 +55,36 @@ func FetchReadings(sensorID string, limit int) ([]models.Reading, error) {
 		history = []models.Reading{}
 	}
 	return history, nil
+}
+
+// Inserts a new sensor reading
+func InsertReading(ctx context.Context, data models.SensorReadingPayload) error {
+	// Fetch calibration values
+	dryRef, wetRef, err := FetchSensorCalibration(ctx, data.SensorID)
+	if err != nil {
+		return fmt.Errorf("sensor with id %s does not exist or calibration not found: %w", data.SensorID, err)
+	}
+
+	// Fetch plant by sensor ID
+	plant, err := FetchPlantBySensorID(ctx, data.SensorID)
+	if err != nil {
+		return fmt.Errorf("no plant found for sensor %s: %w", data.SensorID, err)
+	}
+
+	// Convert raw value to moisture percentage
+	moisture := CalculateMoisturePercentage(data.RawValue, dryRef, wetRef)
+
+	// Insert reading into DB
+	stmt, err := db.PrepareContext(ctx, "INSERT INTO readings(plant_id, moisture_percentage) VALUES(?, ?)")
+	if err != nil {
+		return fmt.Errorf("database error (prepare): %w", err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.ExecContext(ctx, plant.ID, moisture)
+	if err != nil {
+		return fmt.Errorf("database error (insert): %w", err)
+	}
+
+	return nil
 }
