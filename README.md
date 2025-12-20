@@ -7,14 +7,14 @@
 ![AI](https://img.shields.io/badge/AI-Ollama-purple?logo=ollama&logoColor=white)
 
 <p align="center">
-  <img src="./assets/logo.png" width="300" title="Logo">
+  <img src="./assets/logo.png" width="600" title="Logo">
 </p>
 
 **Seed Monitoring System**
 
 *High tech for deep roots*
 
-Seed Sentinel is an open-source platform that translates plant signals into actionable insights. By combining affordable soil sensors with an AI botanist, it monitors real-time conditions and compares them to each plant’s needs. This data-driven approach empowers anyone to grow seeds successfully and restore ecosystems—without proprietary barriers.
+Seed Sentinel is an open-source system that gives your plants a voice. By combining low-cost soil sensors with an AI-powered botanist, it translates real-time soil data into actionable care instructions. It’s a transparent solution designed to help anyone grow plants successfully, free from proprietary lock-ins.
 
 ## 📂 Project Ecosystem
 
