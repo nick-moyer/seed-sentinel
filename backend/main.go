@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -15,6 +17,11 @@ import (
 )
 
 // --- HELPERS ---
+
+type spaHandler struct {
+	staticPath string
+	indexPath  string
+}
 
 func handleJSON[T any](w http.ResponseWriter, r *http.Request, payload *T) bool {
 	// Decode JSON
@@ -30,6 +37,34 @@ func handleJSON[T any](w http.ResponseWriter, r *http.Request, payload *T) bool 
 }
 
 // --- HANDLERS ---
+
+// GET /*
+func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Get absolute path to prevent directory traversal
+	path, err := filepath.Abs(h.staticPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Join the path with the requested URL
+	path = filepath.Join(path, r.URL.Path)
+
+	// Check if the file exists
+	_, err = os.Stat(path)
+
+	// MAGIC: If file doesn't exist (like /settings), serve index.html
+	if os.IsNotExist(err) {
+		http.ServeFile(w, r, filepath.Join(h.staticPath, h.indexPath))
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// If file DOES exist (like main.js), serve it normally
+	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
+}
 
 // POST /calibrate
 func calibrateHandler(w http.ResponseWriter, r *http.Request) {
@@ -128,9 +163,11 @@ func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/telemetry", telemetryHandler).Methods("POST")
 	r.HandleFunc("/configure", configureHandler).Methods("POST")
 
-	// TODO: server frontend
-	fs := http.FileServer(http.Dir("../frontend"))
-	r.PathPrefix("/").Handler(fs)
+	// We use PathPrefix("/") to catch EVERYTHING else
+	spa := spaHandler{staticPath: "../frontend/build", indexPath: "index.html"}
+	r.PathPrefix("/").Handler(spa)
+
+	http.ListenAndServe(":8080", r)
 }
 
 // --- MAIN ---

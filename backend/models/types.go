@@ -1,7 +1,6 @@
 package models
 
 import "time"
-
 // Data received from sensor
 type SensorCalibrationPayload struct {
 	SensorID     string `json:"sensor_id"`
