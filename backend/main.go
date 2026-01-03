@@ -89,7 +89,7 @@ func calibrateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("ACK"))
 }
 
-// POST /configure
+// POST /api/configure
 func configureHandler(w http.ResponseWriter, r *http.Request) {
 	var payload models.PlantConfigurationPayload
 	ctx := r.Context()
@@ -156,15 +156,50 @@ func telemetryHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("ACK"))
 }
 
+// GET /api/sensors
+func fetchSensorsHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	sensors, err := store.FetchAllSensors(ctx)
+	if err != nil {
+		http.Error(w, "Failed to fetch sensors: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(sensors)
+}
+
+// GET /api/plant
+func fetchPlantHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	sensorId := r.URL.Query().Get("sensorID")
+	if sensorId == "" {
+		http.Error(w, "sensorID query parameter is required", http.StatusBadRequest)
+		return
+	}
+
+	plant, err := store.FetchPlantBySensorID(ctx, sensorId)
+	if err != nil {
+		http.Error(w, "Failed to fetch plant: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(plant)
+}
+
 // --- ROUTES ---
 
 func registerRoutes(r *mux.Router) {
 	r.HandleFunc("/calibrate", calibrateHandler).Methods("POST")
 	r.HandleFunc("/telemetry", telemetryHandler).Methods("POST")
-	r.HandleFunc("/configure", configureHandler).Methods("POST")
+	r.HandleFunc("/api/configure", configureHandler).Methods("POST")
+	r.HandleFunc("/api/sensors", fetchSensorsHandler).Methods("GET")
+	r.HandleFunc("/api/plant", fetchPlantHandler).Methods("GET")
 
-	// We use PathPrefix("/") to catch EVERYTHING else
-	spa := spaHandler{staticPath: "../frontend/build", indexPath: "index.html"}
+	spa := spaHandler{staticPath: "../frontend/dist", indexPath: "index.html"}
 	r.PathPrefix("/").Handler(spa)
 
 	http.ListenAndServe(":8080", r)

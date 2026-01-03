@@ -8,6 +8,24 @@ import (
 	"github.com/nick-moyer/seed-sentinel/models"
 )
 
+func FetchAllSensors(ctx context.Context) ([]models.Sensor, error) {
+	rows, err := db.QueryContext(ctx, "SELECT id, dry_reference, wet_reference, created_at FROM sensors")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var sensors []models.Sensor
+	for rows.Next() {
+		var sensor models.Sensor
+		if err := rows.Scan(&sensor.ID, &sensor.DryReference, &sensor.WetReference, &sensor.CreatedAt); err != nil {
+			return nil, err
+		}
+		sensors = append(sensors, sensor)
+	}
+	return sensors, nil
+}
+
 // Fetches dry and wet calibration values for a sensor by ID
 func FetchSensorCalibration(ctx context.Context, sensorID string) (int, int, error) {
 	var dryRef, wetRef int

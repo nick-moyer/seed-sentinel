@@ -32,11 +32,15 @@ The system follows a **Microservices** architecture designed for local privacy a
 
 1.  **The Node:** An ESP32 microcontroller reading raw capacitance values from a soil moisture sensor.
 2.  **The Backend (Orchestrator):** A high-concurrency **Go (Golang)** server that ingests telemetry, manages configuration, and handles notifications.
-3.  **The LLM Agent (Brain):** A Python microservice that interfaces with a local LLM (via **Ollama**) to interpret data and generate "Grow Profiles."
+3.  **The Frontend (Dashbaord):** A **React (Vite)** Single Page Application that provides real-time data visualization and sensor configuration.
+4.  **The LLM Agent (Brain):** A Python microservice that interfaces with a local LLM (via **Ollama**) to interpret data and generate "Grow Profiles."
 
 ```mermaid
 graph LR
+    User((User)) -->|View Dashboard| H[React Frontend]
+
     A[Soil Sensor] -->|Analog Signal| B(ESP32 Node)
+
     B -->|/calibration| C{Go Backend}
     B -->|/telemetry| C{Go Backend}
     C -->|Alerts| D[Ntfy]
@@ -46,6 +50,8 @@ graph LR
     E -->|Inference| F[Ollama]
     F -->|Advice| E
     E -->|Decision| C
+    H -->|/api/sensors| C
+    H -->|/api/configure| C
 ```
 
 ## ⚡ Quick Start Guide (Mac / Linux)
