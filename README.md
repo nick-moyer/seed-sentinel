@@ -1,9 +1,11 @@
 # 🌱 Seed Sentinel
 
 ![Status](https://img.shields.io/badge/Status-Prototype-orange)
-![Language](https://img.shields.io/badge/Backend-Go-blue?logo=go&logoColor=white)
-![Language](https://img.shields.io/badge/Agent-Python-3776AB?logo=python&logoColor=white)
-[![Database: SQLite](https://img.shields.io/badge/Database-SQLite-07405E?style=flat&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
+![Hardware](https://img.shields.io/badge/Hardware-ESP32-E7352C?logo=espressif&logoColor=white)
+![Backend](https://img.shields.io/badge/Backend-Go-blue?logo=go&logoColor=white)
+![Frontend](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=black)
+![Agent](https://img.shields.io/badge/Agent-Python-3776AB?logo=python&logoColor=white)
+![Database](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)
 ![AI](https://img.shields.io/badge/AI-Ollama-purple?logo=ollama&logoColor=white)
 
 <p align="center">
@@ -32,7 +34,7 @@ The system follows a **Microservices** architecture designed for local privacy a
 
 1.  **The Node:** An ESP32 microcontroller reading raw capacitance values from a soil moisture sensor.
 2.  **The Backend (Orchestrator):** A high-concurrency **Go (Golang)** server that ingests telemetry, manages configuration, and handles notifications.
-3.  **The Frontend (Dashbaord):** A **React (Vite)** Single Page Application that provides real-time data visualization and sensor configuration.
+3.  **The Frontend (Dashboard):** A **React (Vite)** Single Page Application that provides real-time data visualization and sensor configuration.
 4.  **The LLM Agent (Brain):** A Python microservice that interfaces with a local LLM (via **Ollama**) to interpret data and generate "Grow Profiles."
 
 ```mermaid
