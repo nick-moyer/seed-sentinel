@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"log"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -21,8 +22,13 @@ func createTable(query string, tableName string) {
 }
 
 func InitDB() {
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "../sentinel.db" // Local development fallback
+	}
+
 	var err error
-	db, err = sql.Open("sqlite3", "./data/sentinel.db")
+	db, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal("Failed to open database:", err)
 	}

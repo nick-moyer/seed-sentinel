@@ -1,0 +1,34 @@
+services:
+  backend:
+    build:
+      target: dev
+    environment:
+      - GIN_MODE=debug
+    volumes:
+      - ./backend:/app
+      - /go/pkg/mod
+      - ./backend/data:/data
+
+  frontend:
+    build:
+      target: dev
+    command: ["npm", "run", "dev", "--", "--host"]
+    environment:
+      - VITE_API_TARGET=http://backend:8080
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  llm-agent:
+    container_name: llm-agent
+    build: ./llm-agent
+    restart: always
+    environment:
+      BACKEND_URL: "http://backend:8080"
+      OLLAMA_HOST: "http://host.docker.internal:11434"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - backend

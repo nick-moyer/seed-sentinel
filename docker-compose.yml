@@ -1,0 +1,42 @@
+services:
+  backend:
+    container_name: backend
+    build:
+      context: ./backend
+      target: prod
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_PATH=/data/sentinel.db
+      - GIN_MODE=release
+    volumes:
+      - sentinel_data:/data
+
+  frontend:
+    container_name: frontend
+    build:
+      context: ./frontend
+      target: prod
+    restart: always
+    environment:
+      - VITE_API_TARGET=http://backend:8080
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  llm-agent:
+    container_name: llm-agent
+    build: ./llm-agent
+    restart: always
+    environment:
+      BACKEND_URL: "http://backend:8080"
+      OLLAMA_HOST: "http://host.docker.internal:11434"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - backend
+
+volumes:
+  sentinel_data:

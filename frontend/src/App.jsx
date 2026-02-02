@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import logo from '../../assets/logo.png'
+import logo from './assets/logo.png'
 
 function App() {
   const [loading, setLoading] = useState(true)
@@ -32,6 +32,7 @@ function App() {
       }
 
       const plant = plantRes.data[0]
+
       setPlant(plant)
       setNewName(plant.plant_name || '')
       setNewDate(plant.date_planted ? plant.date_planted.split('T')[0] : '') // Set date in YYYY-MM-DD format
@@ -88,7 +89,8 @@ function App() {
       <main>
      {/* Data Card */}
         <div className="card hero-card">
-          <img src={logo} alt="Plant Sentinel Logo" className="plant-logo" />
+          { <img src={logo} alt="Plant Sentinel Logo" className="plant-logo" />}
+          {/* Plant Name & ID */}
           <h1 className="plant-title">{plant?.Name ?? 'Unnamed Plant'}</h1>
           <p className="mac-label">{sensor.ID}</p>
 
