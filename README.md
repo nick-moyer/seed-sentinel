@@ -56,14 +56,42 @@ graph LR
     H -->|/api/configure| C
 ```
 
-## ⚡ Quick Start Guide (Mac / Linux)
+## ⚡ Quick Start Guide
+### Prerequisites
+- Docker & Docker Compose
+- Make (Optional, but recommended)
 
-### 1. Automated Setup
-Use the provided setup script to install Ollama, the Llama 3 model, uv, and all dependencies automatically.
+### Development Mode (Hot Reload)
+Use this for coding. Includes live reloading for Go (Air), Python (Watchfiles), and React (Vite). It automatically installs Ollama and pulls the Llama 3 model if missing.
 
-``` bash
-sudo chmod +x scripts/setup.sh
-./scripts/setup.sh
+```bash
+# Starts the stack in interactive mode
+make dev
+```
+
+- Frontend (Vite): http://localhost:5173
+- Backend API: http://localhost:8080
+
+### Production Mode (Static)
+Use this for demo/deployment. Runs optimized binaries and static Nginx assets in the background.
+
+```bash
+# Starts the stack in detached mode
+make prod
+```
+
+- Dashboard (Nginx): http://localhost:3000
+
+### Utility Commands
+```bash
+# Stop all containers
+make down
+
+# View logs (if running in background)
+make logs
+
+# Clean up unused Docker resources
+make clean
 ```
 
 ### 2. Notification Setup (.env & Ntfy)
