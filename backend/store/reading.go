@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"github.com/nick-moyer/seed-sentinel/models"
 )
 
@@ -42,7 +40,7 @@ func FetchReadings(ctx context.Context, sensorID string, limit int) ([]models.Re
         SELECT r.moisture_percentage, r.created_at
         FROM readings r
         INNER JOIN plants p ON r.plant_id = p.id
-        WHERE p.sensor_id = ?
+        WHERE p.sensor_id = $1
         ORDER BY r.created_at ASC
         LIMIT %d
     `, limit)
@@ -85,7 +83,7 @@ func InsertReading(ctx context.Context, data models.SensorReadingPayload) (int, 
 	moisture := CalculateMoisturePercentage(data.RawValue, dryRef, wetRef)
 
 	// Insert reading into DB
-	stmt, err := db.PrepareContext(ctx, "INSERT INTO readings(plant_id, moisture_percentage) VALUES(?, ?)")
+	stmt, err := db.PrepareContext(ctx, "INSERT INTO readings(plant_id, moisture_percentage) VALUES($1, $2)")
 	if err != nil {
 		return 0, fmt.Errorf("database error (prepare): %w", err)
 	}

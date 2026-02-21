@@ -3,8 +3,6 @@ package store
 import (
 	"context"
 
-	_ "github.com/mattn/go-sqlite3"
-
 	"github.com/nick-moyer/seed-sentinel/models"
 )
 
@@ -29,7 +27,7 @@ func FetchAllSensors(ctx context.Context) ([]models.Sensor, error) {
 // Fetches dry and wet calibration values for a sensor by ID
 func FetchSensorCalibration(ctx context.Context, sensorID string) (int, int, error) {
 	var dryRef, wetRef int
-	err := db.QueryRowContext(ctx, "SELECT dry_reference, wet_reference FROM sensors WHERE id = ?", sensorID).Scan(&dryRef, &wetRef)
+	err := db.QueryRowContext(ctx, "SELECT dry_reference, wet_reference FROM sensors WHERE id = $1", sensorID).Scan(&dryRef, &wetRef)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -40,10 +38,10 @@ func FetchSensorCalibration(ctx context.Context, sensorID string) (int, int, err
 func UpsertSensor(ctx context.Context, data models.SensorCalibrationPayload) error {
 	stmt, err := db.PrepareContext(ctx, `
         INSERT INTO sensors (id, dry_reference, wet_reference)
-        VALUES (?, ?, ?)
+        VALUES ($1, $2, $3)
         ON CONFLICT(id) DO UPDATE SET
-            dry_reference = excluded.dry_reference,
-            wet_reference = excluded.wet_reference
+            dry_reference = EXCLUDED.dry_reference,
+            wet_reference = EXCLUDED.wet_reference
     `)
 	if err != nil {
 		return err

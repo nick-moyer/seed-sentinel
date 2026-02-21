@@ -1,36 +1,24 @@
-# backend/.air.toml
 root = "."
 tmp_dir = "tmp"
 
 [build]
-  # Just run plain go build
   cmd = "go build -o ./tmp/main ."
-  # Binary location
   bin = "./tmp/main"
-  # Watch these extensions
   include_ext = ["go", "tpl", "tmpl", "html"]
-  # Ignore these directories
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
-  # Delay in ms after file change
   delay = 1000
-  # Stop running old binary when build errors occur
   stop_on_error = true
-  # Send Interrupt signal before killing process (windows support)
   send_interrupt = false
-  # Delay after sending Interrupt signal
   kill_delay = 500 # ms
 
 [log]
-  # Show log time
   time = false
 
 [color]
-  # Customize each part's color. If no color found, use the raw app log.
   main = "magenta"
   watcher = "cyan"
   build = "yellow"
   runner = "green"
 
 [misc]
-  # Delete tmp directory on exit
   clean_on_exit = true

@@ -7,7 +7,7 @@ COMPOSE_BASE := docker-compose.yml
 COMPOSE_DEV  := docker-compose.dev.yml
 
 # Phony targets
-.PHONY: help dev prod build-dev build-prod down logs clean check-ollama
+.PHONY: help dev prod build-dev build-prod down logs clean check-ollama db-status db-up db-down db-create
 
 # Default target
 help:
@@ -75,3 +75,26 @@ logs:
 
 clean:
 	docker system prune -f
+
+# ==========================================
+# Database Migrations
+# ==========================================
+MIGRATIONS_DIR := backend/migrations
+
+# Load env vars, force host to localhost for local execution, and run goose
+GOOSE_CMD = set -a; [ -f backend/.env ] && . backend/.env; set +a; \
+	export POSTGRES_HOST=localhost; \
+	goose -dir $(MIGRATIONS_DIR) postgres "host=$${POSTGRES_HOST} port=$${POSTGRES_PORT:-5432} user=$${POSTGRES_USER:-admin} password=$${POSTGRES_PASSWORD:-password} dbname=$${POSTGRES_DB:-sentinel} sslmode=disable"
+
+db-status:
+	@$(GOOSE_CMD) status
+
+db-up:
+	@$(GOOSE_CMD) up
+
+db-down:
+	@$(GOOSE_CMD) down
+
+db-create:
+	@read -p "Enter migration name: " name; \
+	$(GOOSE_CMD) create $$name sql

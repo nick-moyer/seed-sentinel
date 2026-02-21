@@ -2,10 +2,11 @@ package store
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
@@ -14,52 +15,33 @@ func DB() *sql.DB {
 	return db
 }
 
-func createTable(query string, tableName string) {
-	_, err := db.Exec(query)
-	if err != nil {
-		log.Fatalf("Failed to create %s table: %v", tableName, err)
-	}
-}
-
 func InitDB() {
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "../sentinel.db" // Local development fallback
-	}
+	user := getEnv("POSTGRES_USER", "admin")
+	password := getEnv("POSTGRES_PASSWORD", "password")
+	dbname := getEnv("POSTGRES_DB", "sentinel")
+	host := getEnv("POSTGRES_HOST", "localhost")
+	port := getEnv("POSTGRES_PORT", "5432")
+
+	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 
 	var err error
-	db, err = sql.Open("sqlite3", dbPath)
+	db, err = sql.Open("postgres", connStr)
 	if err != nil {
 		log.Fatal("Failed to open database:", err)
 	}
 
-	createTable(`
-        CREATE TABLE IF NOT EXISTS sensors (
-            id TEXT PRIMARY KEY,
-			dry_reference INTEGER,
-			wet_reference INTEGER,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );`, "sensors") // id = device mac address
+	// Verify connection
+	if err = db.Ping(); err != nil {
+		log.Fatal("Failed to connect to database:", err)
+	}
 
-	createTable(`
-        CREATE TABLE IF NOT EXISTS plants (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-			sensor_id TEXT UNIQUE,
-            name TEXT,
-			date_planted DATETIME DEFAULT CURRENT_TIMESTAMP,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY(sensor_id) REFERENCES sensors(id)
-        );`, "plants")
+	log.Println("Database connection established")
+}
 
-	createTable(`
-        CREATE TABLE IF NOT EXISTS readings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            plant_id TEXT,
-            moisture_percentage INTEGER,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(plant_id) REFERENCES plants(id)
-        );`, "readings")
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
 
-	log.Println("Database initialized (sentinel.db)")
+	return fallback
 }

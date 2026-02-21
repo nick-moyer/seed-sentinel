@@ -5,7 +5,7 @@
 ![Backend](https://img.shields.io/badge/Backend-Go-blue?logo=go&logoColor=white)
 ![Frontend](https://img.shields.io/badge/Frontend-React-61DAFB?logo=react&logoColor=black)
 ![Agent](https://img.shields.io/badge/Agent-Python-3776AB?logo=python&logoColor=white)
-![Database](https://img.shields.io/badge/Database-SQLite-003B57?logo=sqlite&logoColor=white)
+![Database](https://img.shields.io/badge/Database-PostgreSQL-336791?logo=postgresql&logoColor=white)
 ![AI](https://img.shields.io/badge/AI-Ollama-purple?logo=ollama&logoColor=white)
 
 <p align="center">
@@ -24,7 +24,7 @@ The system is split into two repositories to separate the "Bits" from the "Atoms
 
 | Repository | Description | Tech Stack |
 | :--- | :--- | :--- |
-| **[seed-sentinel](https://github.com/nick-moyer/seed-sentinel)** | **The Hub (This Repo)**<br>Contains the Go Backend, Database, and Python AI Agent. | Go, Python, SQLite, Ollama |
+| **[seed-sentinel](https://github.com/nick-moyer/seed-sentinel)** | **The Hub (This Repo)**<br>Contains the Go Backend, Database, and Python AI Agent. | Go, Python, PostgreSQL, Ollama |
 | **[seed-sentinel-device](https://github.com/nick-moyer/seed-sentinel-device)** | **The Node**<br>Contains the ESP32 Firmware, Circuit Schematics, and 3D CAD files. | C++, PlatformIO, FreeCAD |
 
 
