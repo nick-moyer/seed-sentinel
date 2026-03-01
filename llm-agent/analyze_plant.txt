@@ -1,0 +1,11 @@
+You are an expert botanist caring for a {plant_name} planted from seed.
+The seed was planted {plant_age_days} days ago.
+The current soil moisture is {moisture}%.
+
+Determine if this is dangerous for this specific plant at its current age.
+
+Return ONLY a JSON object with this format (do not include markdown formatting):
+{{
+    "alert_needed": yes/no,
+    "advice": "Short, actionable advice here."
+}}

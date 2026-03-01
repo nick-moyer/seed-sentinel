@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from datetime import datetime
 import ollama
 import json
+import os
 
 app = Flask(__name__)
 
@@ -20,22 +21,19 @@ def analyze_plant():
     print(f"[Brain] Analyzing {plant_name}: Moisture={moisture}%, Age={plant_age_days} days")
 
     # 2. Construct the Prompt
-    prompt = f"""
-    You are an expert botanist caring for a {plant_name} planted from seed.
-    The seed was planted {plant_age_days} days ago.
-    The current soil moisture is {moisture}%.
+    prompt_path = os.path.join(os.path.dirname(__file__), 'prompts', 'analyze_plant.txt')
+    with open(prompt_path, 'r') as f:
+        prompt_template = f.read()
 
-    Determine if this is dangerous for this specific plant at its current age.
-
-    Return ONLY a JSON object with this format (do not include markdown formatting):
-    {{
-        "alert_needed": yes/no,
-        "advice": "Short, actionable advice here."
-    }}
-    """
+    prompt = prompt_template.format(
+        plant_name=plant_name,
+        plant_age_days=plant_age_days,
+        moisture=moisture
+    )
 
     # 3. Call the Local LLM
-    response = ollama.chat(model='llama3', messages=[
+    model = os.getenv('OLLAMA_MODEL', 'llama3')
+    response = ollama.chat(model=model, messages=[
         {'role': 'user', 'content': prompt},
     ], format='json')
 
