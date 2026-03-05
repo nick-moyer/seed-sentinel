@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 
 	"github.com/nick-moyer/seed-sentinel/models"
@@ -24,6 +23,8 @@ type spaHandler struct {
 }
 
 func handleJSON[T any](w http.ResponseWriter, r *http.Request, payload *T) bool {
+	defer r.Body.Close()
+
 	// Decode JSON
 	if err := json.NewDecoder(r.Body).Decode(payload); err != nil {
 		http.Error(w, "Bad JSON", http.StatusBadRequest)
@@ -141,7 +142,11 @@ func telemetryHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Run LLM-Agent in background
 	go func(m models.AgentPayload) {
-		decision, _ := services.RunAgent(m)
+		decision, err := services.RunAgent(m)
+		if err != nil {
+			log.Printf("Agent failed for plant %s: %v\n", m.PlantName, err)
+			return
+		}
 		if decision.AlertNeeded {
 			services.SendNotification(decision.Advice)
 		}
@@ -192,17 +197,15 @@ func fetchPlantHandler(w http.ResponseWriter, r *http.Request) {
 
 // --- ROUTES ---
 
-func registerRoutes(r *mux.Router) {
-	r.HandleFunc("/calibrate", calibrateHandler).Methods("POST")
-	r.HandleFunc("/telemetry", telemetryHandler).Methods("POST")
-	r.HandleFunc("/api/configure", configureHandler).Methods("POST")
-	r.HandleFunc("/api/sensors", fetchSensorsHandler).Methods("GET")
-	r.HandleFunc("/api/plant", fetchPlantHandler).Methods("GET")
+func registerRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("POST /calibrate", calibrateHandler)
+	mux.HandleFunc("POST /telemetry", telemetryHandler)
+	mux.HandleFunc("POST /api/configure", configureHandler)
+	mux.HandleFunc("GET /api/sensors", fetchSensorsHandler)
+	mux.HandleFunc("GET /api/plant", fetchPlantHandler)
 
 	spa := spaHandler{staticPath: "../frontend/dist", indexPath: "index.html"}
-	r.PathPrefix("/").Handler(spa)
-
-	http.ListenAndServe(":8080", r)
+	mux.Handle("/", spa)
 }
 
 // --- MAIN ---
@@ -218,10 +221,12 @@ func main() {
 	store.InitDB()
 
 	// Setup Router and Routes
-	r := mux.NewRouter()
-	registerRoutes(r)
+	mux := http.NewServeMux()
+	registerRoutes(mux)
 
 	// Start Server
 	log.Println("Seed Sentinel Backend listening on :8080...")
-	http.ListenAndServe(":8080", r)
+	if err := http.ListenAndServe(":8080", mux); err != nil {
+		log.Fatal(err)
+	}
 }
